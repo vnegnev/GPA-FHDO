@@ -33,7 +33,7 @@ Mode mode = Mode::idle;
 
 // settings
 const bool displayHexValues=false;
-const byte SPImode = SPI_MODE0;
+const byte SPImode = SPI_MODE1;
 //unsigned int calVal[]={0x0000, 0x8000, 0xFFFF};
 //unsigned int calVal[]={0x5000, 0x6800, 0x8000, 0x9800, 0xB000};
 //unsigned int calVal[numCalElements]={0x0000, 0x1000, 0x2000, 0x3000, 0x4000, 0x5000, 0x6000, 0x7000, 0x8000, 0x9000, 0xA000, 0xB000, 0xC000, 0xD000,0xE000, 0xF000,0xFFFF};
@@ -415,7 +415,7 @@ static unsigned int lastDACCode=0;
   
 void initFindZeroAmpVoltage()
 {
-  currentDACCode = 0x8000;
+  currentDACCode = 0x8800;
   lastDACCode = 0;
 }
 
@@ -491,7 +491,10 @@ void loop()
       case 'i':
       {
         mode=Mode::idle;
-        Serial.print("i = idle/halt all, f = find zero point, cX = choose channel 1-4\n\rr = ramp, p = pulse, g = calculate gain, \n\rd = read values, sX = set channel to current X, \n\rq = query calibration, w = send DAC word\n\r");
+        Serial.print("i = idle/halt all, f = find zero point, cX = choose channel 1-4\n\rr = ramp, p = pulse, g = calculate gain, \n\rd = read values, sX = set channel to current X, \n\rq = query calibration, w = send DAC word, \n\rz = find zero point descending from last value written using w, \n\ra = re-initialise ADC & DAC\n\r");
+        char data[50];
+        sprintf(data,"Active channel: %d\r\n", channel+1);
+        Serial.print(data);
       }
       break;
       case 'r':
@@ -503,6 +506,20 @@ void loop()
       case 'p':
       {
         mode=Mode::pulse;
+      }
+      break;
+      case 'z':
+      {
+        mode=Mode::findZeroAmp;
+        // initFindZeroAmpVoltage();
+        lastDACCode = 0;
+      }
+      break;
+      case 'a':
+      {
+        initADC();
+        initDAC();
+        Serial.print("Re-initialised ADC and DAC.\n\r");
       }
       break;
       case 'f':
@@ -579,9 +596,10 @@ void loop()
 	      inword[4] = 0;
 	      unsigned int dacWord;
 	      sscanf(inword, "%lx", &dacWord);
-	      sprintf(data, "Sending 0x%x to DAC ch %d\r\n", dacWord, channel);
+	      sprintf(data, "Sending 0x%x to DAC ch %d\r\n", dacWord, channel + 1);
 	      Serial.print(data);
 	      writeDACValue(dacWord);
+	      currentDACCode = dacWord;
 	      break;
       case '\n':
       break;
